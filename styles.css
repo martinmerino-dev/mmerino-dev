@@ -1098,7 +1098,11 @@ section {
     align-items: center;
     justify-content: center;
     transition: var(--transition);
-    z-index: 2001;
+    z-index: 2002;
+}
+
+.lightbox-nav-desktop {
+    display: flex;
 }
 
 .lightbox-nav:hover {
