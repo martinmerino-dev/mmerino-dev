@@ -492,15 +492,15 @@ function updateLightboxNav() {
     const showNav = currentLightboxImages.length > 1;
     
     // Desktop arrows
-    const prevBtn = lightbox.querySelector('.lightbox-prev');
-    const nextBtn = lightbox.querySelector('.lightbox-next');
-    prevBtn.style.display = showNav ? '' : 'none';
-    nextBtn.style.display = showNav ? '' : 'none';
+    const prevBtn = lightbox.querySelector('.lightbox-nav-desktop.lightbox-prev');
+    const nextBtn = lightbox.querySelector('.lightbox-nav-desktop.lightbox-next');
+    if (prevBtn) prevBtn.style.display = showNav ? 'flex' : 'none';
+    if (nextBtn) nextBtn.style.display = showNav ? 'flex' : 'none';
     
     // Mobile arrows container
     const mobileArrows = lightbox.querySelector('.lightbox-arrows-mobile');
     if (mobileArrows) {
-        mobileArrows.style.display = showNav ? '' : 'none';
+        mobileArrows.style.display = showNav ? 'flex' : 'none';
     }
 }
 
