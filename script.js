@@ -375,9 +375,16 @@ function initCarousels() {
 }
 
 /* ==========================================
-   Image Lightbox
+   Image Lightbox with Navigation
    ========================================== */
-function openLightbox(imageSrc) {
+let currentLightboxImages = [];
+let currentLightboxIndex = 0;
+
+function openLightbox(imageSrc, allImages = [], startIndex = 0) {
+    // Store images for navigation
+    currentLightboxImages = allImages.length > 0 ? allImages : [imageSrc];
+    currentLightboxIndex = startIndex;
+    
     // Create lightbox if it doesn't exist
     let lightbox = document.querySelector('.lightbox');
     if (!lightbox) {
@@ -390,30 +397,111 @@ function openLightbox(imageSrc) {
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
             </button>
+            <button class="lightbox-nav lightbox-nav-desktop lightbox-prev" aria-label="Previous image">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
             <div class="lightbox-content">
                 <img class="lightbox-image" src="" alt="Full size image">
+                <div class="lightbox-arrows-mobile">
+                    <button class="lightbox-nav lightbox-prev-mobile" aria-label="Previous image">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    <button class="lightbox-nav lightbox-next-mobile" aria-label="Next image">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+                </div>
             </div>
+            <button class="lightbox-nav lightbox-nav-desktop lightbox-next" aria-label="Next image">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
         `;
         document.body.appendChild(lightbox);
         
         // Close on button click
         lightbox.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
         
+        // Navigation buttons (desktop)
+        lightbox.querySelector('.lightbox-prev').addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigateLightbox(-1);
+        });
+        
+        lightbox.querySelector('.lightbox-next').addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigateLightbox(1);
+        });
+        
+        // Navigation buttons (mobile)
+        lightbox.querySelector('.lightbox-prev-mobile').addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigateLightbox(-1);
+        });
+        
+        lightbox.querySelector('.lightbox-next-mobile').addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigateLightbox(1);
+        });
+        
         // Close on background click
         lightbox.addEventListener('click', (e) => {
             if (e.target === lightbox) closeLightbox();
         });
         
-        // Close on Escape key
+        // Keyboard navigation
         document.addEventListener('keydown', (e) => {
+            if (!lightbox.classList.contains('active')) return;
             if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft') navigateLightbox(-1);
+            if (e.key === 'ArrowRight') navigateLightbox(1);
         });
     }
     
+    // Update navigation buttons visibility
+    updateLightboxNav();
+    
     // Set image and show
-    lightbox.querySelector('.lightbox-image').src = imageSrc;
+    lightbox.querySelector('.lightbox-image').src = currentLightboxImages[currentLightboxIndex];
     lightbox.classList.add('active');
     document.body.style.overflow = 'hidden';
+}
+
+function navigateLightbox(direction) {
+    currentLightboxIndex += direction;
+    if (currentLightboxIndex < 0) currentLightboxIndex = currentLightboxImages.length - 1;
+    if (currentLightboxIndex >= currentLightboxImages.length) currentLightboxIndex = 0;
+    
+    const lightbox = document.querySelector('.lightbox');
+    if (lightbox) {
+        lightbox.querySelector('.lightbox-image').src = currentLightboxImages[currentLightboxIndex];
+    }
+}
+
+function updateLightboxNav() {
+    const lightbox = document.querySelector('.lightbox');
+    if (!lightbox) return;
+    
+    // Show/hide navigation based on number of images
+    const showNav = currentLightboxImages.length > 1;
+    
+    // Desktop arrows
+    const prevBtn = lightbox.querySelector('.lightbox-prev');
+    const nextBtn = lightbox.querySelector('.lightbox-next');
+    prevBtn.style.display = showNav ? '' : 'none';
+    nextBtn.style.display = showNav ? '' : 'none';
+    
+    // Mobile arrows container
+    const mobileArrows = lightbox.querySelector('.lightbox-arrows-mobile');
+    if (mobileArrows) {
+        mobileArrows.style.display = showNav ? '' : 'none';
+    }
 }
 
 function closeLightbox() {
@@ -456,14 +544,19 @@ function initImageLightbox() {
         const hotspot = container.querySelector('.expand-hotspot');
         const icon = container.querySelector('.expand-icon');
         
-        // Function to get the image src
-        const getImageSrc = () => {
-            // For carousels, get the active slide
-            const activeSlide = container.querySelector('.carousel-slide.active');
-            if (activeSlide) return activeSlide.src;
+        // Function to get all images and current index
+        const getImagesInfo = () => {
+            const slides = container.querySelectorAll('.carousel-slide');
+            if (slides.length > 0) {
+                // For carousels, get all images and find the active one
+                const allImages = Array.from(slides).map(slide => slide.src);
+                const activeSlide = container.querySelector('.carousel-slide.active');
+                const currentIndex = activeSlide ? Array.from(slides).indexOf(activeSlide) : 0;
+                return { images: allImages, index: currentIndex };
+            }
             // For static images
             const img = container.querySelector('img');
-            return img ? img.src : null;
+            return img ? { images: [img.src], index: 0 } : { images: [], index: 0 };
         };
         
         // Add click handlers to hotspot and icon
@@ -471,8 +564,10 @@ function initImageLightbox() {
             el.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const src = getImageSrc();
-                if (src) openLightbox(src);
+                const { images, index } = getImagesInfo();
+                if (images.length > 0) {
+                    openLightbox(images[index], images, index);
+                }
             });
         });
     });
